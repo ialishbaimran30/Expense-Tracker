@@ -16,7 +16,6 @@ class ExpenseAdmin(admin.ModelAdmin):
     list_display = ("id","title","amount","category","owner","payment_method","favorite","date",)
     list_filter = ("favorite","payment_method","category","date",)
     search_fields = ("title","description",)
-    
     readonly_fields = ("created_at","updated_at",)
     ordering = ("-created_at",)
     list_per_page = 20

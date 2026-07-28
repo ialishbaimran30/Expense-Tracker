@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-import {  PAYMENT_METHODS } from "../config";
+import { EXPENSES_PREFIX, PAYMENT_METHODS } from "../config";
 import "../styles/Expenses.css";
 
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 const emptyForm = {
   title: "",
   amount: "",
   category: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: getTodayString(),
   payment_method: "Cash",
   description: "",
   favorite: false,
+  is_tracked_in_insights: false,
+  is_recurring: false,
+  frequency: "Monthly",
+  next_due_date: "",
 };
 
 export default function Expenses() {
@@ -18,6 +29,7 @@ export default function Expenses() {
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState(""); 
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -25,18 +37,28 @@ export default function Expenses() {
   const [error, setError] = useState("");
 
   const loadCategories = async () => {
-  const res = await api.get("/categories/");
-  setCategories(res.data.results || res.data);
-};
+    try {
+      const res = await api.get(`${EXPENSES_PREFIX}/categories/`);
+      setCategories(res.data.results || res.data);
+    } catch (err) {
+      console.error("Failed to load categories", err);
+    }
+  };
 
   const loadExpenses = async () => {
-  const params = new URLSearchParams();
-  if (search) params.append("search", search);
-  if (categoryFilter) params.append("category", categoryFilter);
-  params.append("ordering", "-date");
-  const res = await api.get(`/expenses/?${params.toString()}`);
-  setExpenses(res.data.results || res.data);
-};
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append("search", search);
+      if (categoryFilter) params.append("category", categoryFilter);
+      if (dateFilter) params.append("date", dateFilter);
+      params.append("ordering", "-date");
+      const res = await api.get(`${EXPENSES_PREFIX}/expenses/?${params.toString()}`);
+      setExpenses(res.data.results || res.data);
+    } catch (err) {
+      console.error("Failed to load expenses", err);
+    }
+  };
+
   useEffect(() => {
     loadCategories();
   }, []);
@@ -44,7 +66,7 @@ export default function Expenses() {
   useEffect(() => {
     loadExpenses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, categoryFilter]);
+  }, [search, categoryFilter,dateFilter]);
 
   const openAddModal = () => {
     setForm(emptyForm);
@@ -55,13 +77,17 @@ export default function Expenses() {
 
   const openEditModal = (exp) => {
     setForm({
-      title: exp.title,
-      amount: exp.amount,
+      title: exp.title || "",
+      amount: exp.amount || "",
       category: exp.category || "",
-      date: exp.date,
-      payment_method: exp.payment_method,
+      date: exp.date || new Date().toISOString().slice(0, 10),
+      payment_method: exp.payment_method || "Cash",
       description: exp.description || "",
-      favorite: exp.favorite,
+      favorite: Boolean(exp.favorite),
+      is_tracked_in_insights: Boolean(exp.is_tracked_in_insights),
+      is_recurring: Boolean(exp.is_recurring),
+      frequency: exp.frequency || "Monthly",
+      next_due_date: exp.next_due_date || "",
     });
     setEditingId(exp.id);
     setError("");
@@ -70,61 +96,83 @@ export default function Expenses() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleAddCategory = async () => {
-  if (!newCategory.trim()) return;
-  const res = await api.post("/categories/", {
-    name: newCategory.trim(),
-  });
-  setCategories([...categories, res.data]);
-  setForm({ ...form, category: res.data.id });
-  setNewCategory("");
-};
-
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-
-  const payload = {
-    ...form,
-    category: form.category || null,
+    if (!newCategory.trim()) return;
+    try {
+      const res = await api.post(`${EXPENSES_PREFIX}/categories/`, { name: newCategory.trim() });
+      setCategories((prev) => [...prev, res.data]);
+      setForm((prev) => ({ ...prev, category: res.data.id }));
+      setNewCategory("");
+    } catch (err) {
+      console.error("Failed to add category", err);
+    }
   };
 
-  try {
-    if (editingId) {
-      await api.put(`/expenses/${editingId}/`, payload);
-    } else {
-      await api.post("/expenses/", payload);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const payload = {
+        ...form,
+        category: form.category || null,
+        recurrence_type: form.frequency ? form.frequency.toLowerCase() : "monthly",
+        frequency: form.frequency || "Monthly",
+      };
+
+      if (editingId) {
+        await api.put(`${EXPENSES_PREFIX}/expenses/${editingId}/`, payload);
+      } else {
+        await api.post(`${EXPENSES_PREFIX}/expenses/`, payload);
+      }
+
+      setShowModal(false);
+      loadExpenses();
+    } catch (err) {
+      const data = err.response?.data;
+      setError(
+        typeof data === "object"
+          ? Object.entries(data)
+              .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(" ") : val}`)
+              .join(" | ")
+          : "Something went wrong."
+      );
     }
-
-    setShowModal(false);
-    loadExpenses();
-  } catch (err) {
-    const data = err.response?.data;
-
-    setError(
-      typeof data === "object"
-        ? Object.values(data).flat().join(" ")
-        : "Something went wrong."
-    );
-  }
-};
+  };
 
   const handleDelete = async (id) => {
-  if (!window.confirm("Delete this expense?")) return;
-  await api.delete(`/expenses/${id}/`);
-  loadExpenses();
-};
+    if (!window.confirm("Delete this expense?")) return;
+    try {
+      await api.delete(`${EXPENSES_PREFIX}/expenses/${id}/`);
+      loadExpenses();
+    } catch (err) {
+      console.error("Failed to delete expense", err);
+    }
+  };
 
   const toggleFavorite = async (exp) => {
-  await api.patch(`/expenses/${exp.id}/`, {
-    favorite: !exp.favorite,
-  });
+    try {
+      await api.patch(`${EXPENSES_PREFIX}/expenses/${exp.id}/`, { favorite: !exp.favorite });
+      loadExpenses();
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
+  };
 
-  loadExpenses();
-};
+  const toggleRecurring = async (exp) => {
+    try {
+      await api.patch(`${EXPENSES_PREFIX}/expenses/${exp.id}/`, { is_recurring: !exp.is_recurring });
+      loadExpenses();
+    } catch (err) {
+      console.error("Failed to toggle recurring status", err);
+    }
+  };
 
   return (
     <div>
@@ -141,17 +189,37 @@ export default function Expenses() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          <div className="date-filter-wrapper">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              title="Filter by specific date"
+            />
+            {dateFilter && (
+              <button 
+                type="button" 
+                className="clear-date-btn" 
+                onClick={() => setDateFilter("")}
+                title="Clear date filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
         <button className="btn btn-primary" onClick={openAddModal}>+ Add expense</button>
       </div>
 
       <div className="expense-table glass">
+        {/* Table Header (Exact 6 Columns) */}
         <div className="expense-row header">
-          <span>Title</span>
-          <span>Category</span>
-          <span>Date</span>
-          <span>Payment</span>
-          <span></span>
+          <span>TITLE</span>
+          <span>RECURRING</span>
+          <span>CATEGORY</span>
+          <span>DATE</span>
+          <span>PAYMENT</span>
+          <span></span> {/* Action buttons space */}
         </div>
 
         {expenses.length === 0 ? (
@@ -159,13 +227,43 @@ export default function Expenses() {
         ) : (
           expenses.map((exp) => (
             <div className="expense-row" key={exp.id}>
+              {/* 1. Title */}
               <div className="expense-title">
                 <strong className="mono">Rs {Number(exp.amount).toLocaleString()}</strong>
-                <span>{exp.title}</span>
+                <span>
+                  {exp.title}{" "}
+                  {exp.is_tracked_in_insights && <span title="Tracked in Insights">💡</span>}
+                </span>
               </div>
-              <span className="tag">{exp.category_name || "Uncategorized"}</span>
+
+              {/* 2. Recurring */}
+              <div>
+                <span 
+                  onClick={() => toggleRecurring(exp)}
+                  style={{ 
+                    cursor: "pointer", 
+                    userSelect: "none",
+                    opacity: exp.is_recurring ? 1 : 0.6,
+                    fontWeight: exp.is_recurring ? "600" : "normal"
+                  }}
+                  title="Click to toggle recurring status"
+                >
+                  {exp.is_recurring ? "Recurring" : "Non-Recurring"}
+                </span>
+              </div>
+
+              {/* 3. Category */}
+              <div>
+                <span className="tag">{exp.category_name || "Uncategorized"}</span>
+              </div>
+
+              {/* 4. Date */}
               <span>{exp.date}</span>
+
+              {/* 5. Payment */}
               <span>{exp.payment_method}</span>
+
+              {/* 6. Action Buttons */}
               <div className="row-actions">
                 <button
                   className={`icon-btn fav ${exp.favorite ? "active" : ""}`}
@@ -216,7 +314,6 @@ export default function Expenses() {
                     name="date"
                     value={form.date}
                     onChange={handleChange}
-                    max={new Date().toISOString().slice(0, 10)}
                     required
                   />
                 </div>
@@ -254,15 +351,56 @@ export default function Expenses() {
                 <textarea name="description" value={form.description} onChange={handleChange} />
               </div>
 
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  name="favorite"
-                  checked={form.favorite}
-                  onChange={handleChange}
-                />
-                Mark as favorite
-              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", margin: "1rem 0" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    name="favorite"
+                    checked={form.favorite}
+                    onChange={handleChange}
+                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  Mark as favorite
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    name="is_tracked_in_insights"
+                    checked={form.is_tracked_in_insights}
+                    onChange={handleChange}
+                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  Track this expense in Smart Insights 💡
+                </label>
+
+                <label style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    name="is_recurring"
+                    checked={form.is_recurring}
+                    onChange={handleChange}
+                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  Make this a Recurring Expense
+                </label>
+              </div>
+
+              {form.is_recurring && (
+                <>
+                  <div className="field">
+                    <label>Frequency</label>
+                    <select name="frequency" value={form.frequency} onChange={handleChange}>
+                      <option value="Daily">Daily</option>
+                      <option value="Weekly">Weekly</option>
+                      <option value="Monthly">Monthly</option>
+                      <option value="Yearly">Yearly</option>
+                    </select>
+                  </div>
+
+                  
+                </>
+              )}
 
               {error && <p className="error-text">{error}</p>}
 

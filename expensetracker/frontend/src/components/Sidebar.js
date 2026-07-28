@@ -1,9 +1,28 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { fetchPendingInvites } from "../api/splitBill";
 import "../styles/Layout.css";
 
 export default function Sidebar() {
   const { logout } = useAuth();
+  const [inviteCount, setInviteCount] = useState(0);
+
+  useEffect(() => {
+    const checkInvites = async () => {
+      try {
+        const res = await fetchPendingInvites();
+        const data = res.data?.results || res.data || [];
+        setInviteCount(Array.isArray(data) ? data.length : 0);
+      } catch (err) {
+        console.error("Error fetching invite count:", err);
+      }
+    };
+
+    checkInvites();
+    const interval = setInterval(checkInvites, 10000); 
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside className="sidebar glass">
@@ -27,17 +46,32 @@ export default function Sidebar() {
         >
           <span className="nav-icon">◈</span> Expenses
         </NavLink>
+
+        <NavLink
+          to="/insights"
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+        >
+          <span className="nav-icon">◇</span> Insights
+        </NavLink>
+
         <NavLink
           to="/budget"
           className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
         >
-        
           <span className="nav-icon">◇</span> Budget
         </NavLink>
-        <NavLink to="/savings" className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}>
-          <span className="nav-icon">◇</span> Savings
+      
+        <NavLink 
+          to="/split-bill" 
+          className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
+        >
+          <span className="nav-icon">◇</span> Split Bill
+          {inviteCount > 0 && (
+            <span style={{ color: "#ef4444", fontWeight: "bold", marginLeft: "8px" }}>
+              {inviteCount}
+            </span>
+          )}
         </NavLink>
-
       </nav>
 
       <div className="sidebar-footer">

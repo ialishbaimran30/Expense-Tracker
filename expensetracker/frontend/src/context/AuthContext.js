@@ -7,6 +7,8 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const getUrl = (endpoint) =>
+    `${AUTH_PREFIX.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -25,7 +27,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (username, password) => {
-    const { data } = await api.post(`${AUTH_PREFIX}/login/`, {
+    const { data } = await api.post(getUrl("login/"), {
       username,
       password,
     });
@@ -37,17 +39,22 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-    const { data } = await api.post(`${AUTH_PREFIX}/register/`, payload);
-    return data;
+    const { data } = await api.post(getUrl("register/"), payload);
   };
 
-  const logout = async () => {
+ const logout = async () => {
     const refresh = localStorage.getItem("refresh");
-    try {
-      await api.post(`${AUTH_PREFIX}/logout/`, { refresh });
-    } catch {
-      // ignore — clearing local state regardless
+    
+    if (refresh) {
+      try {
+        await api.post(getUrl("logout/"), { refresh });
+      } catch {
+        // Silent catch: Token agar pehle se expired/invalid hai, 
+        // to backend reject karega, par frontend session lazmi clear hoga.
+      }
     }
+
+    // Always clear tokens & user state
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     setUser(null);

@@ -6,12 +6,7 @@ class BudgetSerializer(serializers.ModelSerializer):
         model = Budget
         fields = ["id","monthly_budget","month","year","created_at","updated_at",]
         read_only_fields = ["id","created_at","updated_at",]
-    #     validators = [UniqueTogetherValidator(
-    #         queryset=Budget.objects.all(),
-    #         fields=["owner", "month", "year"],
-    #         message="Budget already exists for this month."
-    #     )
-    # ]
+        
     def validate(self, attrs):
         request = self.context["request"]
 

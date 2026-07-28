@@ -1,6 +1,6 @@
+// src/pages/Dashboard.js
 import { useEffect, useState } from "react";
 import api from "../api/axios";
-// import { EXPENSES_PREFIX, BUDGETS_PREFIX } from "../config";
 import GaugeRing from "../components/GaugeRing";
 import "../styles/Dashboard.css";
 
@@ -9,47 +9,53 @@ export default function Dashboard() {
   const [recent, setRecent] = useState([]);
   const [budgetSummary, setBudgetSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [savings, setSavings] = useState({total_saved: 0,});
-  
+
+
   useEffect(() => {
-  const load = async () => {
-    try {
-      const [statsRes,expensesRes, budgetsRes,savingsRes] = await Promise.all([
-        api.get("/expenses/dashboard/"),
-        api.get("/expenses/?ordering=-date"),
-        api.get("/budgets/"),
-        api.get("/savings/summary/"),
-      ]);
-      setStats(statsRes.data);
-      setSavings(savingsRes.data);
-      setRecent((expensesRes.data.results || expensesRes.data).slice(0,5));
+    let isMounted = true;
 
-      const now = new Date();
-      const budgets = budgetsRes.data.results || budgetsRes.data;
-      const current = budgets.find(
-        (b) =>
-          b.month === now.getMonth() + 1 &&
-          b.year === now.getFullYear()
-      );
+    const load = async () => {
+      try {
+        const [statsRes, expensesRes, budgetsRes, savingsRes] = await Promise.all([
+          api.get("/expenses/dashboard/"),
+          api.get("/expenses/?ordering=-date"),
+          api.get("/budgets/"),
+         
+        ]);
 
-      if (current) {
+        if (!isMounted) return;
 
-        const summaryRes = await api.get(
-          `/budgets/${current.id}/summary/`
+        setStats(statsRes.data);
+        setRecent((expensesRes.data.results || expensesRes.data).slice(0, 5));
+
+        const now = new Date();
+        const budgets = budgetsRes.data.results || budgetsRes.data;
+        const current = budgets.find(
+          (b) =>
+            b.month === now.getMonth() + 1 &&
+            b.year === now.getFullYear()
         );
 
-        setBudgetSummary(summaryRes.data);
+        if (current) {
+          const summaryRes = await api.get(
+            `/budgets/${current.id}/summary/`
+          );
+          if (isMounted) setBudgetSummary(summaryRes.data);
+        }
+
+      } catch (err) {
+        console.error("Dashboard Loading Error:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
+    };
 
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    load();
 
-  load();
-}, []);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (loading) return <div className="empty-state">Loading dashboard...</div>;
 
@@ -60,6 +66,7 @@ export default function Dashboard() {
           ⚠ {stats.warning}
         </div>
       )}
+
       <div className="stat-grid">
         <div className="stat-card glass">
           <div className="stat-label">Total spent</div>
@@ -78,23 +85,10 @@ export default function Dashboard() {
           <div className="stat-value mono">{stats?.total_expenses || 0}</div>
         </div>
       </div>
-        <div className="small-stats">
-          <div className="stat-card glass">
-            <div className="stat-label">Total Savings</div>
-            <div className="stat-value mono">
-              Rs {Number(savings?.total_saved || 0).toLocaleString()}
-            </div>
-          </div>
 
+      <div className="small-stats">
         <div className="stat-card glass">
           <div className="stat-label">Budget Remaining</div>
-          <div className="stat-value mono">
-            Rs {Math.max(0, Number(budgetSummary?.remaining || 0)).toLocaleString()}
-          </div>
-          </div>
-
-        <div className="stat-card glass">
-          <div className="stat-label">Remaining Money</div>
           <div className="stat-value mono">
             Rs {Math.max(0, Number(budgetSummary?.remaining || 0)).toLocaleString()}
           </div>

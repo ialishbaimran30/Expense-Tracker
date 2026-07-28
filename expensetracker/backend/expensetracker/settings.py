@@ -31,14 +31,17 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    "channels",
     'django.contrib.staticfiles',
-    'corsheaders',
+    
 
+    'corsheaders',
     'rest_framework',
     'rest_framework.authtoken',
     'dj_rest_auth',
@@ -47,11 +50,10 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount', 
     'dj_rest_auth.registration',
-    "daphne",
-    "channels",
+    'django_apscheduler',
+    
 
     'accounts',
-    'savings',
     'expenses',
     'notifications',
     'budgets',
@@ -79,9 +81,11 @@ REST_FRAMEWORK = {
 
     "PAGE_SIZE": 10,
 }
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
+        
     }
 }
 
@@ -168,7 +172,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Karachi'
 
 USE_I18N = True
 

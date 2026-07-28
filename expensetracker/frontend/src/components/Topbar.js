@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import NotificationBell from "./NotificationBell";
 import "../styles/Layout.css";
 
 export default function Topbar({ title, subtitle }) {
@@ -11,9 +12,12 @@ export default function Topbar({ title, subtitle }) {
         <h2>{title}</h2>
         {subtitle && <span>{subtitle}</span>}
       </div>
-      <div className="user-chip glass-strong">
-        <div className="user-avatar">{initial}</div>
-        <span className="user-name">{user?.username}</span>
+      <div className="topbar-right">
+        <NotificationBell />
+        <div className="user-chip glass-strong">
+          <div className="user-avatar">{initial}</div>
+          <span className="user-name">{user?.username}</span>
+        </div>
       </div>
     </header>
   );

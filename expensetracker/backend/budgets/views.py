@@ -5,12 +5,11 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from notifications.services import send_notification
 from .models import Budget
 from .serializers import BudgetSerializer
 from expenses.models import Expense
 # Create your views here.
-
 
 def budget_summary_cache_key(budget_id):
     return f"budget_summary_{budget_id}"
@@ -36,7 +35,6 @@ class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         serializer.save()
-        # Budget amount itself changed — the cached summary is now stale.
         cache.delete(budget_summary_cache_key(serializer.instance.id))
 
     def perform_destroy(self, instance):
@@ -99,9 +97,6 @@ class BudgetSummaryView(APIView):
             "status": warning,
         }
 
-        # Short timeout — this depends on Expense data from another app,
-        # so instead of wiring cross-app invalidation, we just let it
-        # naturally refresh every 30 seconds.
         cache.set(cache_key, data, timeout=30)
 
         return Response(data)

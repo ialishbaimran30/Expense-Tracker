@@ -66,6 +66,17 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.notification-badge {
+  background-color: #a82222; /* Bright Red Color */
+  color: #b02f2f;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 7px;
+  border-radius: 9999px; /* Pill Shape */
+  margin-left: 8px;
+  line-height: 1;
+}
+
 .nav-item:hover {
   background: var(--glass);
   color: var(--text-primary);
@@ -104,6 +115,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 20;
 }
 
 .topbar-title h2 {
@@ -114,6 +127,12 @@
 .topbar-title span {
   color: var(--text-secondary);
   font-size: 0.82rem;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
 }
 
 .user-chip {
@@ -146,6 +165,8 @@
   padding: 1.6rem;
   flex: 1;
   overflow-y: auto;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 900px) {

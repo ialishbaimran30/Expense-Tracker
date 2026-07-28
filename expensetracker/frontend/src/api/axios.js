@@ -5,7 +5,6 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Attach access token to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access");
   if (token) {
@@ -14,7 +13,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// If access token expired (401), try refreshing once, then retry original request
 let isRefreshing = false;
 let queue = [];
 
@@ -49,12 +47,16 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
       const refresh = localStorage.getItem("refresh");
+      if (!refresh) {
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
 
       try {
-        const { data } = await axios.post(
-          `${API_BASE_URL}${AUTH_PREFIX}/token/refresh/`,
-          { refresh }
-        );
+        const refreshEndpoint = `${API_BASE_URL.replace(/\/$/, "")}${AUTH_PREFIX.replace(/\/$/, "")}/token/refresh/`;
+        const { data } = await axios.post(refreshEndpoint, { refresh });
         localStorage.setItem("access", data.access);
         if (data.refresh) {
           localStorage.setItem("refresh", data.refresh);

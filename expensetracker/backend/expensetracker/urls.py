@@ -23,6 +23,7 @@ urlpatterns = [
     # path('api/accounts/register/',include('dj_rest_auth.registration.urls')),
     path("",include("expenses.urls"),),
     path("",include("budgets.urls"),),
-    path("savings/", include("savings.urls")),
+    path("",include("notifications.urls"),),
     path("api-auth/", include("rest_framework.urls")),
+    # path('split-bill/', include('split_bill.urls'))
 ]
