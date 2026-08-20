@@ -25,6 +25,7 @@ from budgets.models import Budget
 from .filters import ExpenseFilter
 from dateutil.relativedelta import relativedelta
 from .services import process_recurring_expenses
+from notifications.utils import send_live_notification
 
 
 def dashboard_cache_key(user_id):
@@ -279,9 +280,9 @@ class ExpenseInsightsView(APIView):
 
                 if curr_budget > 0:
                     msg = (
-                        f"Your current month budget is PKR {curr_budget:,.0f} "
-                        f"({abs(budget_diff_pct)}% {budget_status} vs last month). "
-                        f"Total spent so far: PKR {curr_expenses:,.0f} "
+                        f"Your budget this month is PKR {curr_budget:,.0f} "
+                        f"({abs(budget_diff_pct)}% {budget_status} from last month).\n"
+                        f"You've spent: PKR {curr_expenses:,.0f} "
                         f"({abs(expense_diff_pct)}% {expense_status} than last month)."
                     )
                 else:
@@ -440,7 +441,6 @@ class SplitGroupListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         group = serializer.save(created_by=self.request.user)
-        # group.members.add(self.request.user)
         GroupMember.objects.create(group=group, user=self.request.user)
 
 
@@ -581,8 +581,6 @@ class RecordSettlementView(generics.CreateAPIView):
         group_name = settlement.group.name if settlement.group else "Split Group"
         today = timezone.now().date()
 
-        # 2. PAYER SIDE: Personal Expense create karein (Spent Increase -> Remaining Decrease)
-
         payer_category, _ = Category.objects.get_or_create(
             owner=payer,
             name="Split Bill Settlement"
@@ -597,9 +595,7 @@ class RecordSettlementView(generics.CreateAPIView):
             description=f"Automated settlement paid in group '{group_name}'."
         )
 
-        # -------------------------------------------------------------
-        # 3. PAYEE SIDE: 'budgets' app se Budget fetch karke Total Monthly Budget Increase karein
-        # -------------------------------------------------------------
+       
         try:
             BudgetModel = apps.get_model('budgets', 'Budget')
             payee_budget = BudgetModel.objects.filter(
@@ -619,7 +615,6 @@ class RecordSettlementView(generics.CreateAPIView):
             owner=payee,
             name="Split Bill Received"
         )
-        # Note: negative amount lagane se ya dynamic text se Sara ko confirmation mil jayegi
         Expense.objects.create(
             owner=payee,
             title=f"Received Settlement from @{payer.username} ({group_name})",
@@ -635,7 +630,7 @@ class RecordSettlementView(generics.CreateAPIView):
             NotificationModel.objects.create(
                 user=payee,
                 title="Payment Received! 💰",
-                message=f"@{payer.username} has settled Rs {amount} with you in '{group_name}'.",
+                message=f"{payer.username} has settled Rs {amount} with you, in '{group_name}'.",
                 is_read=False
             )
         except Exception as e:
@@ -666,9 +661,19 @@ class SendGroupInviteView(APIView):
                 defaults={"status": GroupInvite.StatusChoices.PENDING}
             )
 
+            reinvited = False
             if not created and invite.status == GroupInvite.StatusChoices.REJECTED:
                 invite.status = GroupInvite.StatusChoices.PENDING
                 invite.save()
+                reinvited = True
+
+            if created or reinvited:
+                send_live_notification(
+                    user=receiver,
+                    title="Group Invitation",
+                    message=f"You are invited to join group({group.name}) by {request.user.username}.",
+                    notification_type="invite",
+                )
 
             return Response({"message": f"Invite sent to {receiver.username}!"}, status=status.HTTP_200_OK)
 
@@ -724,7 +729,6 @@ class GroupDetailView(APIView):
             group = SplitGroup.objects.get(id=group_id, members=request.user)
             is_owner = (group.created_by == request.user)
             
-            # Invites status handling (Only for Owner)
             invites_data = []
             if is_owner:
                 invites = GroupInvite.objects.filter(group=group)
@@ -750,7 +754,6 @@ class GroupDetailView(APIView):
     def delete(self, request, group_id):
         try:
             group = SplitGroup.objects.get(id=group_id)
-            # 🟢 Check only owner can delete
             if group.created_by != request.user:
                 return Response({"error": "Only the group owner can delete this group."}, status=status.HTTP_403_FORBIDDEN)
             
@@ -772,14 +775,12 @@ class LeaveGroupView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Remove user from group members
             group.members.remove(request.user)
             GroupMember.objects.filter(group=group, user=request.user).delete()
             
-            # 🟢 3. Clear ALL previous invitations for this user & group
-            # (Apne model ka naam check kar lein: GroupInvite / Invitation / GroupPendingInvite)
             GroupInvite.objects.filter(group=group, receiver=request.user).delete()
             recalculate_group_equal_splits(group)
             return Response({"message": "Left group successfully!"}, status=status.HTTP_200_OK)
         except SplitGroup.DoesNotExist:
             return Response({"error": "Group not found."}, status=status.HTTP_404_NOT_FOUND)
+

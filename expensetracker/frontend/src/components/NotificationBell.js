@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import api from "../api/axios";
 import "../styles/Notifications.css";
@@ -14,11 +15,12 @@ const ICONS = {
 };
 
 export default function NotificationBell() {
-  const { 
-    notifications: contextNotifs, 
-    unreadCount: contextUnread, 
-    markAllAsRead, 
-    clearNotifications 
+  const navigate = useNavigate();
+  const {
+    notifications: contextNotifs,
+    unreadCount: contextUnread,
+    markAllAsRead,
+    clearNotifications
   } = useNotification();
 
   const [localNotifications, setLocalNotifications] = useState([]);
@@ -27,7 +29,7 @@ export default function NotificationBell() {
   const wrapperRef = useRef(null);
   const socketRef = useRef(null);
 
-  // Initial Fetch from DB
+ 
   const fetchNotifications = async () => {
     try {
       const res = await api.get("/notifications/");
@@ -48,7 +50,7 @@ export default function NotificationBell() {
     const token = localStorage.getItem("access");
     if (!token) return;
 
-    // Single WS instance setup
+  
     if (!socketRef.current || socketRef.current.readyState === WebSocket.CLOSED) {
       const wsUrl = `ws://127.0.0.1:8000/ws/notifications/?token=${token}`;
       socketRef.current = new WebSocket(wsUrl);
@@ -84,7 +86,7 @@ export default function NotificationBell() {
     };
   }, []);
 
-  // Sync with context if available
+  
   useEffect(() => {
     if (contextNotifs && contextNotifs.length > 0) {
       setLocalNotifications(contextNotifs);
@@ -92,7 +94,6 @@ export default function NotificationBell() {
     }
   }, [contextNotifs, contextUnread]);
 
-  // Handle click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -110,6 +111,14 @@ export default function NotificationBell() {
     if (nextState && localUnreadCount > 0) {
       if (markAllAsRead) markAllAsRead();
       setLocalUnreadCount(0);
+    }
+  };
+
+  const handleNotifClick = (n) => {
+    const type = n.notification_type || n.type;
+    if (type === "invite") {
+      setOpen(false);
+      navigate("/split-bill");
     }
   };
 
@@ -152,10 +161,13 @@ export default function NotificationBell() {
           {localNotifications.length === 0 ? (
             <div className="notif-empty">No notifications yet.</div>
           ) : (
-            localNotifications.map((n, idx) => (
+            localNotifications.map((n, idx) => {
+              const isInvite = (n.notification_type || n.type) === "invite";
+              return (
               <div
-                className={`notif-item ${n.is_read ? "" : "unread"}`}
+                className={`notif-item ${n.is_read ? "" : "unread"} ${isInvite ? "clickable" : ""}`}
                 key={n.id || idx}
+                onClick={isInvite ? () => handleNotifClick(n) : undefined}
               >
                 <span className="notif-icon">
                   {ICONS[n.notification_type || n.type] || "⛔"}
@@ -169,7 +181,8 @@ export default function NotificationBell() {
                   </span>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

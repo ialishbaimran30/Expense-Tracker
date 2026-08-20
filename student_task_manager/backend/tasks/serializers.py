@@ -7,19 +7,13 @@ class Taskserializer(serializers.ModelSerializer):
     elapsed_minutes = serializers.SerializerMethodField()
     class Meta:
         model = Task
-        fields= ["id", "user", "title", "description", "due_date","priority", "status", "category", "tags", "create_at","time_spent_minutes", "timer_started_at","progress", "elapsed_minutes",]
+        fields= ["id", "user", "title", "description", "due_date","priority", "status", "category", "tags", "create_at","progress", "elapsed_minutes",]
         read_only_fields=["user","create_at"]
 
     def get_progress(self, obj):
         return {"Pending": 0, "In Progress": 50, "Completed": 100}.get(obj.status, 0)
  
-    def get_elapsed_minutes(self, obj):
-        total = obj.time_spent_minutes
-        if obj.timer_started_at:
-            from django.utils import timezone
-            running = (timezone.now() - obj.timer_started_at).total_seconds() / 60
-            total += int(running)
-        return total
+    
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:

@@ -27,6 +27,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Google OAuth "Continue with Google" support.
+# Create an OAuth client (Web application) in Google Cloud Console and paste its Client ID here,
+# or set the GOOGLE_CLIENT_ID environment variable. Must match REACT_APP_GOOGLE_CLIENT_ID on the frontend.
+import os
+GOOGLE_CLIENT_ID = os.environ.get(
+    "GOOGLE_CLIENT_ID",
+    "1053782655475-2toudrpufkg1u7tqdppmqv6iq113bkhf.apps.googleusercontent.com",
+)
+
 
 # Application definition
 
@@ -90,7 +99,7 @@ CHANNEL_LAYERS = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -191,4 +200,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+]
+# settings.py
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]

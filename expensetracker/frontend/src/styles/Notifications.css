@@ -92,6 +92,10 @@
   background: rgba(76, 201, 176, 0.06);
 }
 
+.notif-item.clickable {
+  cursor: pointer;
+}
+
 .notif-icon {
   font-size: 1rem;
   line-height: 1.4;

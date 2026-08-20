@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // Navigation ke liye
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import api from "../api/axios";
 import { 
   fetchMyGroups, 
@@ -71,10 +72,10 @@ export default function SplitBillPage({ currentUser }) {
   const handleInviteAction = async (inviteId, action) => {
     try {
       await respondToInvite(inviteId, action);
-      alert(`Invite ${action.toLowerCase()}ed!`);
+      toast.success(`Invite ${action.toLowerCase()}ed!`);
       loadData();
     } catch (err) {
-      alert("Failed to update invite");
+      toast.error("Failed to update invite");
     }
   };
 
@@ -86,15 +87,15 @@ export default function SplitBillPage({ currentUser }) {
   }
 
   try {
-    // 🟢 Fetch ki bajaye 'api' (axios) use karein
+   
     const response = await api.post(`/split-groups/${groupId}/leave/`);
 
-    alert("You have left the group successfully!");
+    toast.success("You have left the group successfully!");
     setActiveGroup(null);
     loadData();
   } catch (err) {
     console.error("Error leaving group:", err.response || err);
-    alert(err.response?.data?.error || err.response?.data?.detail || "Failed to leave group (Check URL endpoint or Backend)");
+    toast.error(err.response?.data?.error || err.response?.data?.detail || "Failed to leave group (Check URL endpoint or Backend)");
   }
 };
 
@@ -106,7 +107,7 @@ export default function SplitBillPage({ currentUser }) {
       setNewGroupName("");
       loadData();
     } catch (err) {
-      alert("Error creating group");
+      toast.error("Error creating group");
     }
   };
 
@@ -122,21 +123,21 @@ export default function SplitBillPage({ currentUser }) {
 
     await api.delete(`/split-groups/${groupId}/`, {
       headers: {
-        Authorization: `Bearer ${token}`, // Header explicitly attach karein
+        Authorization: `Bearer ${token}`, 
       }
     });
 
-    alert("Group deleted successfully!");
+    toast.success("Group deleted successfully!");
     if (activeGroup?.id === groupId) {
       setActiveGroup(null);
     }
-    loadData(); // List refresh karein
+    loadData();
   } catch (err) {
     console.error("Delete Group Error:", err.response);
     if (err.response?.status === 403) {
-      alert("Permission Error: Please log in again or check user authentication.");
+      toast.error("Permission Error: Please log in again or check user authentication.");
     } else {
-      alert("Failed to delete group!");
+      toast.error("Failed to delete group!");
     }
   }
 };
@@ -145,10 +146,10 @@ export default function SplitBillPage({ currentUser }) {
     if (!inviteUsername) return;
     try {
       await sendGroupInvite(activeGroup.id, inviteUsername);
-      alert(`Invitation sent to @${inviteUsername}`);
+      toast.success(`Invitation sent to ${inviteUsername}`);
       setInviteUsername("");
     } catch (err) {
-      alert(err.response?.data?.error || "User not found or already invited!");
+      toast.error(err.response?.data?.error || "User not found or already invited!");
     }
   };
 
@@ -161,9 +162,7 @@ const handleAddExpense = async (e) => {
     const total = parseFloat(expAmount);
     const splitValue = membersList.length > 0 ? total / membersList.length : total;
 
-    // 🟢 SAFELY EXTRACT USER ID (Har case mein User ID extract hoga, GroupMember ID nahi)
     const splitsPayload = membersList.map((member) => {
-      // Direct user object ho, ya inner user ID ho, ya object fallback
       const resolvedUserId = typeof member.user === 'object' 
         ? member.user?.id 
         : (member.user || member.user_id || member.id);
@@ -175,15 +174,6 @@ const handleAddExpense = async (e) => {
       };
     });
 
-    // Payer ID extract karne ke liye bhi exact fallback:
-    // const selectedMember = membersList.find((m) => {
-    //   const mUserId = typeof m.user === 'object' ? m.user?.id : (m.user || m.user_id || m.id);
-    //   return String(mUserId) === String(paidBy);
-    // });
-
-    // const resolvedPayerId = selectedMember 
-    //   ? (typeof selectedMember.user === 'object' ? selectedMember.user?.id : (selectedMember.user || selectedMember.user_id))
-    //   : (paidBy || currentUser?.id);
 
     const payload = {
       title: expTitle,
@@ -199,11 +189,11 @@ const handleAddExpense = async (e) => {
     setExpTitle("");
     setExpAmount("");
     await handleCalculateBalances(activeGroup.id);
-    alert("Expense added successfully!");
+    toast.success("Expense added successfully!");
 
   } catch (err) {
     console.error("Add Expense Error:", err.response?.data || err);
-    alert(err.response?.data?.error || "Failed to add expense");
+    toast.error(err.response?.data?.error || "Failed to add expense");
   }
 };
 
@@ -216,11 +206,11 @@ const handleAddExpense = async (e) => {
         amount: settlement.amount,
         is_settled: true
       });
-      alert("Expense settled successfully!");
+      toast.success("Expense settled successfully!");
       await handleCalculateBalances(activeGroup.id);
     } catch (err) {
       console.error("Settlement Error:", err);
-      alert("Failed to settle transaction");
+      toast.error("Failed to settle transaction");
     }
   };
 
@@ -295,7 +285,7 @@ const handleAddExpense = async (e) => {
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
                     {activeGroup.invites.map((inv) => (
                       <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.3)", padding: "0.4rem 0.8rem", borderRadius: "5px", fontSize: "0.85rem" }}>
-                        <span>@{inv.receiver_username}</span>
+                        <span>{inv.receiver_username}</span>
                         <span style={{ 
                           padding: "0.1rem 0.5rem", 
                           borderRadius: "4px", 
@@ -369,7 +359,7 @@ const handleAddExpense = async (e) => {
                 whiteSpace: "nowrap"
               }}
             >
-              Paid by {currentUser?.username || "You"}
+              Paid by You
             </div>
               <button type="submit" style={{ background: "#10b981", color: "#fff", border: "none", padding: "0.5rem 1rem", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}>
                 + Add
@@ -395,16 +385,19 @@ const handleAddExpense = async (e) => {
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {balances?.who_owes_whom?.map((s, idx) => {
                     console.log("Current User ID:", currentUser?.id, "Settle From ID:", s.from_user_id, "Settle From Username:", s.from_username, "Logged Username:", currentUser?.username);
-                    const isPayer = 
+                    const isPayer =
                       String(s.from_user_id || s.from_user || "").trim() === String(currentUser?.id || "").trim() ||
                       String(s.from_username || "").toLowerCase().replace("@", "") === String(currentUser?.username || "").toLowerCase().replace("@", "");
+                    const isPayee =
+                      String(s.to_user_id || s.to_user || "").trim() === String(currentUser?.id || "").trim() ||
+                      String(s.to_username || "").toLowerCase().replace("@", "") === String(currentUser?.username || "").toLowerCase().replace("@", "");
 
                     return (
                       <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.2)", padding: "0.6rem 1rem", borderRadius: "6px" }}>
-                        
+
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <span style={{ fontSize: "0.88rem" }}>
-                            <strong>@{s.from_username}</strong> has to pay <strong>@{s.to_username}</strong>: <strong style={{ color: "#ef4444" }}>Rs {s.amount}</strong>
+                            <strong>{isPayer ? "You" : s.from_username}</strong> {isPayer ? "have" : "has"} to pay <strong>{isPayee ? "you" : s.to_username}</strong>: <strong style={{ color: "#ef4444" }}>Rs {s.amount}</strong>
                           </span>
                           {s.expense_titles && (
                             <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", marginTop: "2px" }}>
@@ -466,7 +459,7 @@ const handleAddExpense = async (e) => {
                   <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.05)", padding: "0.8rem", borderRadius: "8px" }}>
                     <div>
                       <strong style={{ fontSize: "1rem" }}>{inv.group_name}</strong>
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Invited by @{inv.sender_detail?.username}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Invited by {inv.sender_detail?.username}</div>
                     </div>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <button 

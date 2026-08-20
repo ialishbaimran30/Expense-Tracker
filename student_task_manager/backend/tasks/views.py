@@ -86,15 +86,7 @@ class TaskViewSet(ModelViewSet):
         task.save()
         return Response(Taskserializer(task).data)
 
-    @action(detail=True, methods=["post"])
-    def stop_timer(self, request, pk=None):
-        task = self.get_object()
-        if task.timer_started_at:
-            elapsed = (timezone.now() - task.timer_started_at).total_seconds() / 60
-            task.time_spent_minutes += int(elapsed)
-            task.timer_started_at = None
-            task.save()
-        return Response(Taskserializer(task).data)
+   
 
 
 class CategoryViewSet(ModelViewSet):

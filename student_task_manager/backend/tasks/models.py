@@ -32,8 +32,6 @@ class Task(models.Model):
       description = models.TextField()
       due_date = models.DateField()
       priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES,default="Medium")
-      time_spent_minutes = models.PositiveIntegerField(default=0)
-      timer_started_at = models.DateTimeField(null=True, blank=True)
       due_time = models.TimeField(null=True, blank=True)          # e.g. 5:00 PM
       deadline_notified = models.BooleanField(default=False) 
 

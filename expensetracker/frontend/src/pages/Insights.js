@@ -38,7 +38,7 @@ export default function Insights() {
   return (
     <div style={{ padding: "1rem", maxWidth: "900px", margin: "0 auto" }}>
       {/* Header */}
-      <div
+      {/* <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -56,7 +56,7 @@ export default function Insights() {
         <div className="error-text" style={{ marginBottom: "1rem" }}>
           {error}
         </div>
-      )}
+      )} */}
 
       {insights.length === 0 ? (
         <div className="panel glass" style={{ padding: "1.5rem" }}>

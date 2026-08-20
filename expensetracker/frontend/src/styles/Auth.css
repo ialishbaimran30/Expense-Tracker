@@ -1,16 +1,20 @@
 .auth-screen {
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .auth-card {
   width: 100%;
   max-width: 400px;
-  padding: 2.4rem 2.2rem;
+  max-height: 100%;
+  overflow: hidden;
   box-sizing: border-box; /* Card width overflow protection */
+  padding: 2.4rem 2.2rem;
 }
 
 .auth-header {
@@ -82,4 +86,141 @@
 .auth-switch a {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* Real-time username availability */
+.username-status {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+}
+
+.username-status.checking {
+  color: var(--text-secondary);
+}
+
+.username-status.available {
+  color: #2eb872;
+}
+
+.username-status.taken,
+.username-status.invalid {
+  color: #e05555;
+}
+
+.username-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.suggestion-chip {
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.suggestion-chip:hover {
+  background: var(--accent);
+  color: #06120f;
+}
+
+/* Divider between the form and "Continue with Google" */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  margin: 1.1rem 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--text-secondary);
+  opacity: 0.25;
+}
+
+.auth-divider span {
+  padding: 0 0.7rem;
+}
+
+.google-btn-container {
+  display: flex;
+  justify-content: center;
+}
+
+.google-status {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.google-step-intro {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.auth-form .btn-link {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.5rem;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+/* Compact spacing so the full form still fits without scrolling on short viewports */
+@media (max-height: 760px) {
+  .auth-screen {
+    padding: 0.5rem;
+  }
+
+  .auth-card {
+    padding: 0.5rem 1.6rem;
+  }
+
+  .auth-header {
+    margin-bottom: 0.25rem;
+  }
+
+  .auth-mark {
+    width: 26px;
+    height: 26px;
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .auth-header h1 {
+    font-size: 1.05rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .auth-header p {
+    font-size: 0.76rem;
+  }
+
+  .auth-form .field {
+    margin-bottom: 0.3rem;
+  }
+
+  .auth-form .btn-primary {
+    padding: 0.45rem;
+    margin-top: 0.2rem;
+  }
+
+  .auth-switch {
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+  }
 }

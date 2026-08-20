@@ -40,11 +40,11 @@ class Command(BaseCommand):
                     created_count += 1
                     self.stdout.write(self.style.SUCCESS(f"✅ Generated expense: {recurring.title}"))
 
-                # Date advance update
+              
                 recurring.next_due = recurring.calculate_next_due_date()
                 recurring.save()
 
-        # 🔍 Always Print Summary: Ab 'Created: 0' bhi print hoga agar koi item nahi mila
+      
         self.stdout.write(
             self.style.SUCCESS(f"Successfully processed recurring expenses. Created: {created_count}")
         )

@@ -4,6 +4,8 @@ from django.core.validators import MinValueValidator
 from dateutil.relativedelta import relativedelta
 from datetime import date
 from django.utils import timezone
+from django.db import models
+from django.contrib.auth import get_user_model
 # Create your models here.
 
 class PaymentMethod(models.TextChoices):
@@ -163,7 +165,7 @@ class GroupSettlement(models.Model):
     payer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="settlements_paid")
     payee = models.ForeignKey(User, on_delete=models.CASCADE, related_name="settlements_received")
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(1)])
-    is_settled = models.BooleanField(default=True) # Direct settle logic
+    is_settled = models.BooleanField(default=True) 
     created_at = models.DateTimeField(auto_now_add=True)
 
 class GroupInvite(models.Model):
@@ -183,3 +185,5 @@ class GroupInvite(models.Model):
 
     def __str__(self):
         return f"Invite to {self.receiver.username} for {self.group.name} [{self.status}]"
+
+

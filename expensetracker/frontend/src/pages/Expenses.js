@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import api from "../api/axios";
 import { EXPENSES_PREFIX, PAYMENT_METHODS } from "../config";
 import "../styles/Expenses.css";
@@ -65,8 +66,13 @@ export default function Expenses() {
 
   useEffect(() => {
     loadExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [search, categoryFilter,dateFilter]);
+
+  useEffect(() => {
+    document.body.classList.toggle("expense-modal-open", showModal);
+    return () => document.body.classList.remove("expense-modal-open");
+  }, [showModal]);
 
   const openAddModal = () => {
     setForm(emptyForm);
@@ -118,6 +124,13 @@ export default function Expenses() {
     e.preventDefault();
     setError("");
 
+    if (form.title.length > 255) {
+      toast.error("Expense title is too long", {
+        description: "Please keep the title to 255 characters or fewer.",
+      });
+      return;
+    }
+
     try {
       const payload = {
         ...form,
@@ -128,8 +141,10 @@ export default function Expenses() {
 
       if (editingId) {
         await api.put(`${EXPENSES_PREFIX}/expenses/${editingId}/`, payload);
+        toast.success("Expense updated successfully");
       } else {
         await api.post(`${EXPENSES_PREFIX}/expenses/`, payload);
+        toast.success("Expense added successfully");
       }
 
       setShowModal(false);
@@ -150,6 +165,7 @@ export default function Expenses() {
     if (!window.confirm("Delete this expense?")) return;
     try {
       await api.delete(`${EXPENSES_PREFIX}/expenses/${id}/`);
+      toast.success("Expense deleted successfully");
       loadExpenses();
     } catch (err) {
       console.error("Failed to delete expense", err);
@@ -219,7 +235,7 @@ export default function Expenses() {
           <span>CATEGORY</span>
           <span>DATE</span>
           <span>PAYMENT</span>
-          <span></span> {/* Action buttons space */}
+          <span></span> 
         </div>
 
         {expenses.length === 0 ? (
@@ -227,7 +243,7 @@ export default function Expenses() {
         ) : (
           expenses.map((exp) => (
             <div className="expense-row" key={exp.id}>
-              {/* 1. Title */}
+              
               <div className="expense-title">
                 <strong className="mono">Rs {Number(exp.amount).toLocaleString()}</strong>
                 <span>

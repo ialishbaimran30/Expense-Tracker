@@ -1,23 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import UsernameField from "../components/UsernameField";
+import GoogleAuthButton from "../components/GoogleAuthButton";
+import GoogleUsernameStep from "../components/GoogleUsernameStep";
 import "../styles/Auth.css";
 
 const initialForm = {
   username: "",
   email: "",
-  first_name: "",
-  last_name: "",
   password: "",
-  confirm_password: "",
 };
 
 export default function Register() {
-  const { register } = useAuth();
+  const { register, googleAuth } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState("idle");
+  const [googlePending, setGooglePending] = useState(null);
+  const [googleError, setGoogleError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -37,8 +41,34 @@ export default function Register() {
     }
   };
 
+  const handleGoogleCredential = async (credential) => {
+    setGoogleError("");
+    setGoogleLoading(true);
+    try {
+      const data = await googleAuth(credential);
+      if (data.status === "login") {
+        navigate("/");
+      } else {
+        setGooglePending({
+          credential,
+          email: data.email,
+          suggestedUsername: data.suggested_username,
+        });
+      }
+    } catch (err) {
+      setGoogleError(
+        err.response?.data?.error || "Google sign-in failed. Please try again."
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const fieldError = (name) =>
     errors[name] && <p className="error-text">{[].concat(errors[name]).join(" ")}</p>;
+
+  const disableSubmit =
+    loading || usernameStatus === "taken" || usernameStatus === "invalid";
 
   return (
     <div className="auth-screen">
@@ -49,60 +79,56 @@ export default function Register() {
           <p>Start tracking your expenses today</p>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="field">
-            <label>Username</label>
-            <input name="username" value={form.username} onChange={handleChange} required />
-          </div>
-          {fieldError("username")}
+        {googlePending ? (
+          <GoogleUsernameStep
+            email={googlePending.email}
+            credential={googlePending.credential}
+            suggestedUsername={googlePending.suggestedUsername}
+            onDone={() => navigate("/")}
+            onCancel={() => setGooglePending(null)}
+          />
+        ) : (
+          <>
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <UsernameField
+                value={form.username}
+                onChange={handleChange}
+                onStatusChange={setUsernameStatus}
+              />
+              {fieldError("username")}
 
-          <div className="field">
-            <label>Email</label>
-            <input type="email" name="email" value={form.email} onChange={handleChange} required />
-          </div>
-          {fieldError("email")}
+              <div className="field">
+                <label>Email</label>
+                <input type="email" name="email" value={form.email} onChange={handleChange} required />
+              </div>
+              {fieldError("email")}
 
-          <div className="name-row">
-            <div className="field">
-              <label>First name</label>
-              <input name="first_name" value={form.first_name} onChange={handleChange} />
-            </div>
-            <div className="field">
-              <label>Last name</label>
-              <input name="last_name" value={form.last_name} onChange={handleChange} />
-            </div>
-          </div>
+              <div className="field">
+                <label>Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              {fieldError("password")}
 
-          <div className="field">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          {fieldError("password")}
+              {errors.detail && <p className="error-text">{errors.detail}</p>}
 
-          <div className="field">
-            <label>Confirm password</label>
-            <input
-              type="password"
-              name="confirm_password"
-              value={form.confirm_password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          {fieldError("confirm_password")}
+              <button className="btn btn-primary" type="submit" disabled={disableSubmit}>
+                {loading ? "Creating account..." : "Create account"}
+              </button>
+            </form>
 
-          {errors.detail && <p className="error-text">{errors.detail}</p>}
+            <div className="auth-divider"><span>or</span></div>
 
-          <button className="btn btn-primary" type="submit" disabled={loading}>
-            {loading ? "Creating account..." : "Create account"}
-          </button>
-        </form>
+            {googleLoading && <p className="google-status">Signing in with Google...</p>}
+            {googleError && <p className="error-text">{googleError}</p>}
+            <GoogleAuthButton onCredential={handleGoogleCredential} onError={setGoogleError} />
+          </>
+        )}
 
         <p className="auth-switch">
           Already have an account? <Link to="/login">Log in</Link>

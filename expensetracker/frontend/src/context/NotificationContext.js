@@ -36,7 +36,8 @@ export const NotificationProvider = ({ children }) => {
 
     socket.onmessage = (event) => {
       try {
-        const newNotif = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
+        const newNotif = data.notification || data;
         setNotifications((prev) => [newNotif, ...prev]);
         setUnreadCount((prev) => prev + 1);
       } catch (err) {

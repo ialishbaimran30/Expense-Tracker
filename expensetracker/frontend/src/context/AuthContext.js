@@ -42,26 +42,56 @@ export function AuthProvider({ children }) {
     const { data } = await api.post(getUrl("register/"), payload);
   };
 
- const logout = async () => {
+  // Step 1 of "Continue with Google": verifies the Google credential on the
+  // backend. Existing accounts are logged in immediately; new emails come
+  // back as { status: "signup_required", ... } for the caller to handle.
+  const googleAuth = async (credential) => {
+    const { data } = await api.post(getUrl("google/"), { credential });
+    if (data.status === "login") {
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
+      setUser(data.user);
+    }
+    return data;
+  };
+
+  // Step 2: finalizes account creation for a new Google user once they've
+  // picked a unique username, then logs them straight into the dashboard.
+  const googleCompleteSignup = async (credential, username) => {
+    const { data } = await api.post(getUrl("google/complete/"), { credential, username });
+    localStorage.setItem("access", data.access);
+    localStorage.setItem("refresh", data.refresh);
+    setUser(data.user);
+    return data;
+  };
+
+  const updateProfile = async (payload) => {
+    const { data } = await api.put(`${AUTH_PREFIX}/profile/`, payload);
+    setUser(data);
+    return data;
+  };
+
+  const logout = async () => {
     const refresh = localStorage.getItem("refresh");
     
     if (refresh) {
       try {
         await api.post(getUrl("logout/"), { refresh });
       } catch {
-        // Silent catch: Token agar pehle se expired/invalid hai, 
-        // to backend reject karega, par frontend session lazmi clear hoga.
+        
       }
     }
 
-    // Always clear tokens & user state
+   
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, googleAuth, googleCompleteSignup, updateProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

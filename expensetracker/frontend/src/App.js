@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 import { AuthProvider ,useAuth} from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
@@ -19,6 +20,7 @@ function SplitBillWithAuth() {
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster richColors theme="dark" position="top-right" />
       <AuthProvider>
         <NotificationProvider>
 

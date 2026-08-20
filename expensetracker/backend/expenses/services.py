@@ -13,7 +13,6 @@ def process_recurring_expenses():
 
     for recurring in due_recurring:
         with transaction.atomic():
-            # 1. Main Expense table me naya expense auto-generate hoga
             Expense.objects.create(
                 owner=recurring.owner,
                 title=recurring.title,
@@ -26,7 +25,7 @@ def process_recurring_expenses():
                 recurrence_type=recurring.frequency.lower()
             )
 
-            # 2. Key Step: Agli Due Date Recalculate karke update karega
+            
             recurring.next_due = recurring.calculate_next_due_date()
             recurring.save()
 
@@ -42,8 +41,6 @@ def generate_smart_insights(user):
     today = date.today()
     current_year = today.year
     current_month = today.month
-
-    # Date calculations
     current_month_start = date(current_year, current_month, 1)
     days_in_current_month = calendar.monthrange(current_year, current_month)[1]
 
@@ -52,17 +49,13 @@ def generate_smart_insights(user):
 
     insights = []
 
-    # ==========================================
-    # 1. CATEGORY COMPARISON (OPTIMIZED)
-    # ==========================================
-    # Current month category totals
+ 
     curr_cat_expenses = (
         Expense.objects.filter(owner=user, date__range=[current_month_start, today])
         .values('category__name')
         .annotate(total=Sum('amount'))
     )
 
-    # Fetch ALL previous month category totals in 1 Query
     prev_cat_expenses = {
         item['category__name'] or 'Uncategorized': item['total'] or 0
         for item in (
@@ -85,17 +78,14 @@ def generate_smart_insights(user):
                     "message": f"You spent {percent_increase}% more on {cat_name} this month."
                 })
 
-    # ==========================================
-    # 2. VENDOR/TITLE COMPARISON (OPTIMIZED)
-    # ==========================================
-    # Current month vendor totals
+    
     curr_vendor_expenses = (
         Expense.objects.filter(owner=user, date__range=[current_month_start, today])
         .values('title')
         .annotate(total=Sum('amount'))
     )
 
-    # Fetch ALL previous month vendor totals in 1 Query
+    
     prev_vendor_expenses = {
         item['title'].lower(): item['total'] or 0
         for item in (
@@ -117,9 +107,7 @@ def generate_smart_insights(user):
                 "message": f"Your {title} expenses increased by PKR {diff:,.0f}."
             })
 
-    # ==========================================
-    # 3. BUDGET PROJECTION & BURN RATE
-    # ==========================================
+   
     current_month_budget = Budget.objects.filter(
         owner=user, 
         month=current_month, 
