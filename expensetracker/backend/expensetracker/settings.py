@@ -10,27 +10,55 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_env_file(path):
+    """Populate os.environ from a simple KEY=VALUE .env file, without
+    overriding any variable already set at the OS level. Avoids adding
+    django-environ/python-dotenv as a dependency for this one file."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file(BASE_DIR / ".env")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o7$$9+udfu5vojq^05-kin$xb*%tvh^9ux-k5l04z-o57xvc37'
+# In production this MUST be overridden via the DJANGO_SECRET_KEY env var
+# (set as an Azure App Service application setting / GitHub secret). The
+# fallback below is only ever used for local dev.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-o7$$9+udfu5vojq^05-kin$xb*%tvh^9ux-k5l04z-o57xvc37",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Defaults to False (fail-safe); local dev sets DJANGO_DEBUG=True in .env
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if h.strip()
+]
 
 # Google OAuth "Continue with Google" support.
 # Create an OAuth client (Web application) in Google Cloud Console and paste its Client ID here,
 # or set the GOOGLE_CLIENT_ID environment variable. Must match REACT_APP_GOOGLE_CLIENT_ID on the frontend.
-import os
 GOOGLE_CLIENT_ID = os.environ.get(
     "GOOGLE_CLIENT_ID",
     "1053782655475-2toudrpufkg1u7tqdppmqv6iq113bkhf.apps.googleusercontent.com",
@@ -108,6 +136,7 @@ SIMPLE_JWT = {
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -144,12 +173,16 @@ ASGI_APPLICATION = "expensetracker.asgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER':'postgres',
-        'PASSWORD':'Toyy5498jj78.',
-        'HOST' : 'localhost',
-        'PORT':'5432'
-}}
+        'NAME': os.environ.get('DB_NAME', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'OPTIONS': {
+            'sslmode': os.environ.get('DB_SSLMODE', 'prefer' if DEBUG else 'require'),
+        },
+    }
+}
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -192,6 +225,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -199,8 +242,17 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    o.strip()
+    for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 # settings.py
 
 CORS_ALLOW_HEADERS = [
@@ -211,3 +263,26 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# Production security settings (Azure App Service terminates TLS at the
+# front-end load balancer and forwards over HTTP with X-Forwarded-Proto,
+# hence SECURE_PROXY_SSL_HEADER).
+#
+# SECURE_SSL_REDIRECT is deliberately left False: Azure App Service's own
+# internal container health/readiness probe hits the container directly
+# over plain HTTP without setting X-Forwarded-Proto, so Django would 301
+# that probe request. Azure then reads the 301 as "container not ready"
+# and serves its own 503 to real users instead of proxying to it — the
+# container itself is healthy the whole time, it's just never reached.
+# Azure's edge already enforces HTTPS for genuine external traffic
+# (HTTPS Only), so an app-level redirect here is redundant for real
+# users and actively breaks the platform's health check.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    X_FRAME_OPTIONS = "DENY"

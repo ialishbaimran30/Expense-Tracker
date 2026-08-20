@@ -1,5 +1,5 @@
-export const API_BASE_URL = "http://127.0.0.1:8000";
-export const WS_BASE_URL = "ws://127.0.0.1:8000";
+export const API_BASE_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
 export const AUTH_PREFIX = "/accounts";
 export const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
 export const EXPENSES_PREFIX = "";

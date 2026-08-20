@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import api from "../api/axios";
+import { WS_BASE_URL } from "../config";
 
 const NotificationContext = createContext();
 
@@ -31,7 +32,7 @@ export const NotificationProvider = ({ children }) => {
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
 
-    const socket = new WebSocket(`ws://127.0.0.1:8000/ws/notifications/?token=${token}`);
+    const socket = new WebSocket(`${WS_BASE_URL}/ws/notifications/?token=${token}`);
     wsRef.current = socket;
 
     socket.onmessage = (event) => {

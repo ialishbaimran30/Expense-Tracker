@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../context/NotificationContext";
 import api from "../api/axios";
+import { WS_BASE_URL } from "../config";
 import "../styles/Notifications.css";
 
 const ICONS = {
@@ -52,7 +53,7 @@ export default function NotificationBell() {
 
   
     if (!socketRef.current || socketRef.current.readyState === WebSocket.CLOSED) {
-      const wsUrl = `ws://127.0.0.1:8000/ws/notifications/?token=${token}`;
+      const wsUrl = `${WS_BASE_URL}/ws/notifications/?token=${token}`;
       socketRef.current = new WebSocket(wsUrl);
 
       socketRef.current.onopen = () => {
