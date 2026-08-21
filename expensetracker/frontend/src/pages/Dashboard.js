@@ -16,11 +16,10 @@ export default function Dashboard() {
 
     const load = async () => {
       try {
-        const [statsRes, expensesRes, budgetsRes, savingsRes] = await Promise.all([
+        const [statsRes, expensesRes, budgetsRes] = await Promise.all([
           api.get("/expenses/dashboard/"),
           api.get("/expenses/?ordering=-date"),
           api.get("/budgets/"),
-         
         ]);
 
         if (!isMounted) return;

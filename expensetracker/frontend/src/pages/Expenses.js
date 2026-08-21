@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "../api/axios";
 import { EXPENSES_PREFIX, PAYMENT_METHODS } from "../config";
@@ -46,7 +46,7 @@ export default function Expenses() {
     }
   };
 
-  const loadExpenses = async () => {
+  const loadExpenses = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (search) params.append("search", search);
@@ -58,7 +58,7 @@ export default function Expenses() {
     } catch (err) {
       console.error("Failed to load expenses", err);
     }
-  };
+  }, [search, categoryFilter, dateFilter]);
 
   useEffect(() => {
     loadCategories();
@@ -66,8 +66,7 @@ export default function Expenses() {
 
   useEffect(() => {
     loadExpenses();
-
-  }, [search, categoryFilter,dateFilter]);
+  }, [loadExpenses]);
 
   useEffect(() => {
     document.body.classList.toggle("expense-modal-open", showModal);

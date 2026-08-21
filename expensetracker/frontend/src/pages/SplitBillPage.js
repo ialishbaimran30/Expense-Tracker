@@ -24,7 +24,7 @@ export default function SplitBillPage({ currentUser }) {
   const [inviteUsername, setInviteUsername] = useState("");
   const [expTitle, setExpTitle] = useState("");
   const [expAmount, setExpAmount] = useState("");
-  const [paidBy, setPaidBy] = useState("");
+  const [, setPaidBy] = useState("");
   const [balances, setBalances] = useState(null);
 
   const loadData = async () => {
@@ -88,7 +88,7 @@ export default function SplitBillPage({ currentUser }) {
 
   try {
    
-    const response = await api.post(`/split-groups/${groupId}/leave/`);
+    await api.post(`/split-groups/${groupId}/leave/`);
 
     toast.success("You have left the group successfully!");
     setActiveGroup(null);

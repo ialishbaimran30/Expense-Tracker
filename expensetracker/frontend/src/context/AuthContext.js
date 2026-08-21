@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (payload) => {
-    const { data } = await api.post(getUrl("register/"), payload);
+    await api.post(getUrl("register/"), payload);
   };
 
   // Step 1 of "Continue with Google": verifies the Google credential on the

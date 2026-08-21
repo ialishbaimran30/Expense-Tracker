@@ -5,7 +5,7 @@ import api from "../api/axios";
 export default function Insights() {
   const [insights, setInsights] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
 
   const fetchInsights = async () => {
     setLoading(true);
